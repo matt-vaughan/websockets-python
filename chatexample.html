@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+        <div>
+            <ol id="messages">
+
+            </ol>
+            <input id="message" type="text">
+            <button id="send">Send</button>
+        </div>
+        <script>
+            function addMessage(message) {
+                // 1. Select the ordered list (OL) element
+                const ol = document.getElementById("messages");
+
+                // 2. Create a new list item (LI) element
+                const li = document.createElement("li");
+
+                // 3. Create a text node for the new item's content
+                const textNode = document.createTextNode("message");
+
+                // 4. Append the text node to the list item
+                li.appendChild(textNode);
+
+                // 5. Append the completed list item to the ordered list
+                ol.appendChild(li);
+            }
+
+            const socket = new WebSocket('ws://localhost:6789');
+            socket.addEventListener('open', (event) => {
+                console.log('WebSocket connection established.');
+                socket.send('Hello Server!');
+            });
+
+            socket.addEventListener('message', (event) => {
+                console.log('Message from server:', event.data);
+                addMessage(event.data);
+                // Data is often sent as JSON strings, so you may need to parse it:
+                // const messageData = JSON.parse(event.data);
+            });
+
+            socket.addEventListener('error', (event) => {
+                console.error('WebSocket error:', event);
+            });
+
+            socket.addEventListener('close', (event) => {
+                console.log('WebSocket connection closed:', event.code, event.reason);
+            });
+
+            var send_button = document.getElementById("send");
+            send_button.addEventListener('click', (event) => {
+                const message = document.getElementById("message").value;
+                socket.send(message);
+            });
+        </script>
+    </body>
+</html>
