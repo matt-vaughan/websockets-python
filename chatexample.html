@@ -28,7 +28,7 @@
                 ol.appendChild(li);
             }
 
-            const socket = new WebSocket('ws://localhost:6789');
+            const socket = new WebSocket('ws://matt-vaughan.com/ws');
             socket.addEventListener('open', (event) => {
                 console.log('WebSocket connection established.');
                 socket.send('Hello Server!');
