@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 User=www-data
 # Set the working directory to where your script and its dependencies are
-WorkingDirectory=/opt/websocket-python/
+WorkingDirectory=/home/bitnami/websocket-python/
 # Command to execute the script
-ExecStart=/usr/bin/python3 /opt/websockets-python/chatserver.py
+ExecStart=/usr/bin/python3 /home/bitnami/websockets-python/chatserver.py
 Restart=on-failure
 
 [Install]
