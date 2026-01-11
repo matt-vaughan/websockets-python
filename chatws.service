@@ -1,0 +1,15 @@
+[Unit]
+Description=WebSocket Chat Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+# Set the working directory to where your script and its dependencies are
+WorkingDirectory=/opt/websocket-python/
+# Command to execute the script
+ExecStart=/usr/bin/python3 /opt/websockets-python/chatserver.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -35,8 +35,8 @@ async def main():
     Starts the WebSocket server.
     """
     # Start the server on localhost port 6789
-    async with websockets.serve(chat_handler, "localhost", 6789):
-        print("Chat server started on ws://localhost:6789")
+    async with websockets.serve(chat_handler, "0.0.0.0", 6789):
+        print("Chat server started on ws://0.0.0.0:6789")
         await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":
