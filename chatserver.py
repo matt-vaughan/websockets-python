@@ -18,10 +18,13 @@ async def chat_handler(websocket):
             # For this simple example, we just pass the raw message
             print(f"Received message: {message}")
             
+            # Broadcast message to all clients including self
+            await websockets.broadcast(connected_clients, message)
+            
             # Broadcast message to all other connected clients
-            other_clients = [client for client in connected_clients if client != websocket]
-            if other_clients:
-                await asyncio.wait([client.send(message) for client in other_clients])
+            #other_clients = [client for client in connected_clients if client != websocket]
+            #if other_clients:
+            #    await asyncio.wait([client.send(message) for client in other_clients])
                 
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection
