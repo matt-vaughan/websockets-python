@@ -4,9 +4,33 @@ import time
 import websockets
 import json
 
-
 # Set of connected clients
 connected_clients = set()
+
+# last 50 messages
+recent_messages = list()
+
+class MessageTimed:
+    def __init__(self, message, username="Unknown", thread=connected_clients):
+        self.message = message
+        self.time = time.time()
+        self.username = username
+        self.thread = thread
+    
+    def jsonString(self):
+        d = dict()
+        d["username"] = self.username
+        d["time"] = self.time
+        d["message"] = self.message
+        return json.dumps(d)
+
+def add_message(message, username="unknown"):
+    global recent_messages
+    msgTimed = MessageTimed(message, username)
+    recent_messages.append(msgTimed)
+    if len(recent_messages) > 50:
+        recent_messages = recent_messages[len(recent_messages)-50:len(recent_messages)]
+    return msgTimed
 
 def remove_by_websocket(websocket, client=connected_clients):
     for ws, ttd in connected_clients:
@@ -19,15 +43,33 @@ async def chat_handler(websocket):
     """
     # Register client
     connected_clients.add((websocket, time.time() + 300))
+
+    # send most recent 50 messages
+    if recent_messages:
+        [await websocket.send(timedmsg.message) for timedmsg in recent_messages]
     try:
         # Listen for messages
         async for message in websocket:
             # Prepare message (e.g., add username/timestamp in a real app)
             # For this simple example, we just pass the raw message
             print(f"Received message: {message}")
+
+            message_data = None
+            try:
+                message_data : dict = json.loads(s=message)
+            except json.decoder.JSONDecodeError:
+                print("message is not well formed json")
+
+            # save message to list of 50 recent messages and broadcast to all users
+            if message_data and message_data["username"] and message_data["message"]:
+                timed_msg = add_message(message_data["message"], username=message_data["username"])
+                
+                # Broadcast message to all clients including self
+                websockets.broadcast([ws for ws, ttd in connected_clients], timed_msg.jsonString())
+            else:
+                # ssave unidentified message
+                add_message(message)
             
-            # Broadcast message to all clients including self
-            websockets.broadcast([ws for ws, ttd in connected_clients], message)
             
             # Broadcast message to all other connected clients
             #other_clients = [client for client in connected_clients if client != websocket]

@@ -4,28 +4,30 @@
     </head>
     <body>
         <div>
-            <ol id="messages">
+            <ul id="messages">
 
-            </ol>
+            </ul>
+            <input id="username" type="text" placeholder="username">
             <input id="message" type="text">
             <button id="send">Send</button>
         </div>
         <script>
-            function addMessage(message) {
+            
+            function addMessage(message, username="unknown") {
                 // 1. Select the ordered list (OL) element
-                const ol = document.getElementById("messages");
+                const ul = document.getElementById("messages");
 
                 // 2. Create a new list item (LI) element
                 const li = document.createElement("li");
 
                 // 3. Create a text node for the new item's content
-                const textNode = document.createTextNode(message);
-
+                const textNode = document.createTextNode(username + ": " + message);
+                
                 // 4. Append the text node to the list item
                 li.appendChild(textNode);
-
+                
                 // 5. Append the completed list item to the ordered list
-                ol.appendChild(li);
+                ul.appendChild(li);
             }
 
             const socket = new WebSocket('ws://localhost:6789');
@@ -36,7 +38,20 @@
 
             socket.addEventListener('message', (event) => {
                 console.log('Message from server:', event.data);
-                addMessage(event.data);
+                
+                try {
+                    const messageData = JSON.parse(event.data);
+                    if (messageData && messageData.username && messageData.message) {
+                        addMessage(messageData.message, messageData.username);
+                    } else {
+                        addMessage(event.data);
+                    }
+                } catch {
+                    console.log("Couldn't parse message as json")
+                    addMessage(event.data);
+                }
+                
+                
                 // Data is often sent as JSON strings, so you may need to parse it:
                 // const messageData = JSON.parse(event.data);
             });
@@ -51,9 +66,27 @@
 
             var send_button = document.getElementById("send");
             send_button.addEventListener('click', (event) => {
-                const message = document.getElementById("message").value;
-                socket.send(message);
+                const message = document.getElementById("message");
+                const username = document.getElementById("username");
+                const escape = (str) => {
+                    return str.replace(/(\\+)/g, '\\\\').replace(/(\\*)"/g, '\\"');
+                }
+
+                socket.send("{ \"username\": \"" + escape(username.value) + "\" , \"message\": \"" + escape(message.value) + "\" }");
+                message.value = ""
             });
+
+            var message = document.getElementById("message");
+
+            // Execute a function when the user presses a key on the input field
+            message.addEventListener("keypress", function(event) {
+                // Check if the key pressed is "Enter"
+                if (event.key === "Enter") {
+                    // Trigger the button element with a click
+                    button = document.getElementById("send");
+                    button.click();
+                }
+            })
         </script>
     </body>
 </html>
