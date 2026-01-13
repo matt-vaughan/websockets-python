@@ -36,7 +36,7 @@ async def chat_handler(websocket):
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection
         print(f"Client disconnected with exception")
-        await remove_by_websocket(websocket)
+        remove_by_websocket(websocket)
 
 async def timeout():
     while True:
