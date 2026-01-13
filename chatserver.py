@@ -1,5 +1,4 @@
 import asyncio
-import threading
 import time
 import websockets
 import json
@@ -42,32 +41,38 @@ class Connections:
             yield connection.websocket
     
                     
-class MessageTimed:
-    def __init__(self, message_data, thread_name="Main"):
+class Message:
+    def __init__(self, message_data:dict, room_name="Main"):
         message_data["time"] = int(time.time())
-        message_data["thread_name"] = thread_name
+        message_data["room_name"] = room_name
         self.message_data = message_data
     
+    def __iter__(self):
+        for key, value in self.message_data.items():
+            yield key, value
+
     def json(self):
         return json.dumps(self.message_data)
     
-    def thread_name(self):
-        if 'thread_name' in self.message_data:
-            return self.message_data["thread_name"]
+    def room_name(self):
+        if 'room_name' in self.message_data:
+            return self.message_data["room_name"]
         else:
             raise ValueError("Data missing")
     
     def __eq__(self, other):
-        if isinstance(other, MessageTimed):
+        if isinstance(other, Message
+    ):
             return self.message_data["time"] == other.message_data["time"]
         else:
             return False
     
     def __gt__(self, other):
-        if isinstance(other, MessageTimed):
+        if isinstance(other, Message
+    ):
             return self.message_data["time"] > other.message_data["time"]
         else:
-            raise TypeError(f"Cannot compare MessageTimed with {type(other)}")
+            raise TypeError(f"Cannot compare Message with {type(other)}")
     
     def __lt__(self, other):
         return not self.__gt__(other) and not self.__eq__(other)
@@ -89,12 +94,12 @@ class Connection:
             raise TypeError("Must pass one Connection, or one tuple with ServerConnection and int, or a ServerConnection and an int")
 
     def tuple(self):
-        return (self.websocket, self.ttd)
-    
+        return (self.websocket, self.ttd)      
+
     def alive(self):
         return self.ttd > int(time.time())
         
-    def send(self, message : MessageTimed):
+    def send(self, message : Message):
         return self.websocket.send(message.json())
         
     def __eq__(self, value):
@@ -110,17 +115,21 @@ class Connection:
         return not self.__eq__(value)
     
 
-class Thread:
+class Room:
+    MAX = int(50)
+    
     def __init__(self, name):
         self.name = name
-        self.recent_messages : list[MessageTimed] = list()
+        self.recent_messages : list[Message] = list()
     
     def __add__(self, message):
-        if type(message) == MessageTimed:
+        if type(message) == Message:
             self.recent_messages.append(message)
+            if Room.MAX < len(self.recent_messages):
+                self.recent_messages[len(self.recent_messages)-Room.MAX:]
             return self.recent_messages
         else:
-            return NotImplemented
+            raise TypeError(message,"expected Message as argument got " + str(type(message)))
     
     def add(self, message):
         return self.__add__(message)
@@ -130,26 +139,25 @@ class Thread:
             yield message
 
 
-class Threads:
-    def __init__(self, threads=[], current_thread="Main", connections=[]):
-        self.current_thread = current_thread
+class Rooms:
+    def __init__(self, rooms=[], current_room="Main", connections=[]):
+        self.current_room = current_room
         self.connections = Connections([Connection(client) for client in connections])
 
-        if isinstance(threads, list):
-            self.threads = threads
-        elif isinstance(threads, set):
-            self.threads = list(threads)
+        if isinstance(rooms, list):
+            self.rooms = rooms
+        elif isinstance(rooms, set):
+            self.rooms = list(rooms)
         else:
-            raise TypeError("Cannot use" + threads + " which is a " + type(threads) + " as list of threads")
+            raise TypeError("Cannot use" + rooms + " which is a " + type(rooms) + " as list of rooms")
 
     def __add__(self, other):
         if isinstance(other, Connection):
             self.connections.add(other)
-        else:
-            try:
-                self.connections.add(Connection(other))
-            except:
-                raise TypeError("Cannot add "+ str(type(other)) +" to Connections")
+        elif isinstance(other, list) or isinstance(other, dict) or isinstance(other, tuple):
+            self.connections.add(Connection(other))
+        else:    
+            raise TypeError("Cannot add "+ str(type(other)) +" to Connections")
         return self
     
     def drop_by_connection(self, ws):
@@ -160,71 +168,71 @@ class Threads:
         return self.__add__(other)
 
     def broadcast_recent(self, websocket):
-        for thread in self.threads:
-            if thread.name == self.current_thread:
-                for message in thread:
+        for room in self.rooms:
+            if room.name == self.current_room:
+                for message in room:
                     websockets.broadcast([websocket], message.json())
 
-    def broadcast_threads(self, websocket):
-        message = MessageTimed({"threads" : [thread.name for thread in self.threads]}, thread_name=self.current_thread)
+    def broadcast_rooms(self, websocket):
+        message = Message({"rooms" : [room.name for room in self.rooms]}, room_name=self.current_room)
         websockets.broadcast( [websocket], message.json() )
     
     def broadcast(self, message):
-        for thread in self.threads:
-            if thread.name == message.thread_name():
-                thread.add(message)
+        for room in self.rooms:
+            if room.name == message.room_name():
+                room += message
                 websockets.broadcast(self.connections.websockets(), message.json())
 
-    def change_thread(self, new_name):
-        self.current_thread = new_name
+    def change_room(self, new_name):
+        self.current_room = new_name
     
     def __getitem__(self, key, default=None):
         if key == None:
-            for thread in self.threads:
-                if thread.name == self.current_thread:
-                    return thread
+            for room in self.rooms:
+                if room.name == self.current_room:
+                    return room
         if isinstance(key, str):
-            for thread in self.threads:
-                if thread.name == key:
-                    return thread
-        elif isinstance(key, int) and len(self.threads) > key:
-                return self.threads[key]
-        elif isinstance(key, thread) and thread in self.threads:
-                return thread
+            for room in self.rooms:
+                if room.name == key:
+                    return room
+        elif isinstance(key, int) and len(self.rooms) > key:
+                return self.rooms[key]
+        elif isinstance(key, room) and room in self.rooms:
+                return room
         else:
-            return default
-
+            return default     
+        
     def __setitem__(self, key, value):
-        if isinstance(key, str) and isinstance(value, Thread):
+        if isinstance(key, str) and isinstance(value, Room):
             if key == value.name:
-                for i, t in enumerate(self.threads):
+                for i, t in enumerate(self.rooms):
                     if t.name == key:
-                        self.threads.insert(i, value)
+                        self.rooms.insert(i, value)
             else:
-                raise ValueError("Key doesn't match thread name")
+                raise ValueError("Key doesn't match room name")
         else:
             return NotImplemented
 
     def __iter__(self):
-        for thread in self.threads:
-            yield thread
+        for room in self.rooms:
+            yield room
 
         
 
-threads = Threads( [Thread("Main"), Thread("Special")], current_thread="Main" )
+rooms = Rooms( [Room("Main"), Room("Special") ], current_room="Main" )
 
-async def chat_handler(websocket):
+async def chat_handler(websocket : websockets.ServerConnection):
     """
     Handles a single WebSocket connection.
     """
     # Register client with a time to die (removed from our connection list)
-    threads.connections.add(Connection(websocket, int(time.time()) + 300))
+    rooms.connections.add(Connection(websocket, int(time.time()) + 300))
 
     # send most recent 50 messages
-    threads.broadcast_recent(websocket)
+    rooms.broadcast_recent(websocket)
 
-    # send all the thread names
-    threads.broadcast_threads(websocket)
+    # send all the room names
+    rooms.broadcast_rooms(websocket)
 
     try:
         # Listen for messages
@@ -238,26 +246,26 @@ async def chat_handler(websocket):
                 print("message is not well formed json")
 
 
-            # received a change thread command
-            if message_data and "newthread" in message_data.keys():
-                print(f"now switching threads from {threads.current_thread} to {message_data['newthread']}")
-                threads.current_thread = message_data["newthread"]
-                threads.broadcast_recent(websocket)
-                threads.broadcast_threads(websocket)
+            # received a change room command
+            if message_data and "newroom" in message_data.keys():
+                print(f"now switching rooms from {rooms.current_room} to {message_data['newroom']}")
+                rooms.current_room = message_data["newroom"]
+                rooms.broadcast_recent(websocket)
+                rooms.broadcast_rooms(websocket)
 
             if message_data and 'username' in message_data.keys() and 'message' in message_data.keys():
-                msg_timed = MessageTimed(message_data, thread_name=threads.current_thread)
-                threads.broadcast(msg_timed)
-                print("sending message " + msg_timed.json())
-            
+                m = Message(message_data, room_name=rooms.current_room)
+                rooms.broadcast(m)
+                print("sending message " + m.json())
+
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection
         print(f"Client disconnected with exception")
-        threads[None].drop_by_websocket(websocket)
+        rooms.drop_by_connection(websocket)
 
 async def timeout():
     while True:
-        threads.connections.remove_timed_out()
+        rooms.connections.remove_timed_out()
         await asyncio.sleep(1)
 
 async def main():

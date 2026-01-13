@@ -1,0 +1,39 @@
+#messages li {
+    margin: 10px;
+    padding: 10px 5px 10px 5px;
+    border-radius: 20px;
+    border-color: rgba(125,65,55,0.8);
+    border-width: 3px;
+    background-color: rgba(85,155,155,0.5);
+}
+
+#messages li span#userspan {
+    background-color: rgba(210, 105, 30, 0.7);
+    margin: 0 10px;
+    
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: bold;
+    color: rgb(42, 42, 231);
+}
+
+#messages li span#messagespan {
+    background-color: rgba(210, 205, 230, 0.3);
+    margin: auto;
+    
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16px;
+    font-style: normal;
+    color: rgb(255, 179, 254);
+}
+
+#messages li span#timespan {
+    background-color: rgba(210, 205, 130, 0.7);
+    margin: auto;
+    
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-style: italic;
+    color: rgb(83, 83, 83);
+}
