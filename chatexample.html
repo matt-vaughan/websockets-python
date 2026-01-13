@@ -3,7 +3,7 @@
     <head>
     </head>
     <body>
-        <div>
+        <div style="float: left;">
             <ul id="messages">
 
             </ul>
@@ -11,8 +11,34 @@
             <input id="message" type="text">
             <button id="send">Send</button>
         </div>
+        <div style="float: right;">
+            <ul id="threads">
+
+            </ul>
+        </div>
         <script>
-            
+            const socket = new WebSocket('ws://localhost:6789');
+
+            function updateThreads(threads) {
+                const ul = document.getElementById("threads");
+                ul.innerHTML = "";
+
+                threads.forEach(thread_name => {
+                    const li = document.createElement("li");
+                    const textNode = document.createTextNode(thread_name);
+                    li.appendChild(textNode);
+                    
+                    li.id = thread_name;
+                    li.addEventListener('click', (event) => {
+                        console.log("sending" + JSON.stringify({newthread: event.target.id}));
+                        socket.send( JSON.stringify({newthread: event.target.id}) );
+                        var msgs = document.getElementById("messages");
+                        msgs.innerHTML = "";
+                    });
+                    
+                    ul.appendChild(li);    
+                });
+            }
             function addMessage(message, username="unknown") {
                 // 1. Select the ordered list (OL) element
                 const ul = document.getElementById("messages");
@@ -30,7 +56,6 @@
                 ul.appendChild(li);
             }
 
-            const socket = new WebSocket('ws://localhost:6789');
             socket.addEventListener('open', (event) => {
                 console.log('WebSocket connection established.');
                 socket.send('Hello Server!');
@@ -41,7 +66,9 @@
                 
                 try {
                     const messageData = JSON.parse(event.data);
-                    if (messageData && messageData.username && messageData.message) {
+                    if (messageData && messageData.threads) {
+                        updateThreads(messageData.threads);
+                    } else if (messageData && messageData.username && messageData.message) {
                         addMessage(messageData.message, messageData.username);
                     } else {
                         addMessage(event.data);
