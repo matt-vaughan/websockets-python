@@ -4,21 +4,13 @@ import websockets
 import json
 
 class Connections:
-    def __init__(self, connections=None):
-        if type(connections) == None:
-            self.connections = []
-        elif type(connections) == set[tuple[any,int]] \
-        or type(connections) == set[Connection] \
-        or type(connections) == Connections:
-            self.connections = [Connection(connection) for connection in connections]
-        elif type(connections) == list:
-            self.connections = [Connection(connection) for connection in connections]
-        else:
-            raise TypeError("Expected Connection or set and got " + str(type(connections)))
+    def __init__(self, connections=[]):
+        self.connections = connections
         
     def remove_timed_out(self):
         for connection in self.connections:
             if not connection.alive():
+                connection.websocket.close()
                 self.connections.remove(connection)
 
     def add(self, connection):
@@ -39,7 +31,30 @@ class Connections:
     def websockets(self):
         for connection in self.connections:
             yield connection.websocket
+
+class Connection:
+    def __init__(self, websocket, ttd):
+        self.websocket = websocket
+        self.ttd = ttd
+
+    def tuple(self):
+        return (self.websocket, self.ttd)      
+
+    def alive(self):
+        return self.ttd > int(time.time())
+        
+    def send(self, message):
+        return self.websocket.send(message.json())
+        
+    def __eq__(self, other):
+        if isinstance(other, Connection):
+            return self.websocket == other.websocket
+        elif isinstance(other, websockets.ServerConnection):
+            return self.websocket == other
+        else:
+            return NotImplemented
     
+    def __ne__(self,value): return not self == value   
                     
 class Message:
     def __init__(self, message_data:dict, room_name="Main"):
@@ -61,171 +76,203 @@ class Message:
             raise ValueError("Data missing")
     
     def __eq__(self, other):
-        if isinstance(other, Message
-    ):
+        if isinstance(other, Message):
             return self.message_data["time"] == other.message_data["time"]
         else:
             return False
+    def __ne__(self,other): return not self == other
     
     def __gt__(self, other):
-        if isinstance(other, Message
-    ):
+        if isinstance(other, Message):
             return self.message_data["time"] > other.message_data["time"]
         else:
-            raise TypeError(f"Cannot compare Message with {type(other)}")
-    
-    def __lt__(self, other):
-        return not self.__gt__(other) and not self.__eq__(other)
-
-class Connection:
-    def __init__(self, *args):
-        if len(args) == 1 and isinstance(args[0], Connection):
-            self.websocket = args[0].websocket
-            self.ttd = args[0].ttd
-        elif len(args) == 1 and isinstance(args[0], tuple[any,int]):
-            self.websocket, self.ttd = args[0]
-        elif len(args) == 2 and isinstance(args[1], int):
-            self.websocket = args[0]
-            self.ttd = args[1]
-        elif len(args) == 2 and isinstance(args[0], int):
-            self.websocket = args[1]
-            self.ttd = args[0]
-        else:
-            raise TypeError("Must pass one Connection, or one tuple with ServerConnection and int, or a ServerConnection and an int")
-
-    def tuple(self):
-        return (self.websocket, self.ttd)      
-
-    def alive(self):
-        return self.ttd > int(time.time())
-        
-    def send(self, message : Message):
-        return self.websocket.send(message.json())
-        
-    def __eq__(self, value):
-        if isinstance(value, tuple):
-            ws, ttd = value
-            return self.websocket == ws and self.ttd == ttd
-        elif isinstance(value, Connection):
-            return self.websocket == value.websocket and self.ttd == value.ttd
-        else:
             return NotImplemented
-    
-    def __ne__(self,value):
-        return not self.__eq__(value)
-    
+    def __le__(self, other): return not self > other
+    def __lt__(self, other): return not self > other and self != other
+    def __ge__(self, other): return not self < other 
 
 class Room:
     MAX = int(50)
     
     def __init__(self, name):
         self.name = name
-        self.recent_messages : list[Message] = list()
+        self.messages : list[Message] = list()
     
     def __add__(self, message):
         if type(message) == Message:
-            self.recent_messages.append(message)
-            if Room.MAX < len(self.recent_messages):
-                self.recent_messages[len(self.recent_messages)-Room.MAX:]
-            return self.recent_messages
+            self.messages.append(message)
+            if Room.MAX < len(self.messages):
+                self.messages[len(self.messages)-Room.MAX:]
+            return self.messages
         else:
             raise TypeError(message,"expected Message as argument got " + str(type(message)))
     
+    def __iadd__(self, other):
+        if isinstance(other, Message):
+            self + other
+            return self
+        else:
+            return NotImplemented
+        
     def add(self, message):
-        return self.__add__(message)
+        return self + message
 
+    def __getitem__(self, key):
+        match type(key):
+            case type(str):
+                return [m.message_data[key] for m in self.messages if key in m.message_data]
+            case type(int):
+                return self.messages[key]
+            case _:
+                return NotImplemented
+            
     def __iter__(self):
-        for message in self.recent_messages:
+        for message in self.messages:
             yield message
 
 
 class Rooms:
+
+    rooms = list()
+    connections = Connections()
+    current_room : str 
+
+    instance = None
+
+    @classmethod
+    def __class_getitem__(cls, key=None):
+        if not cls.instance:
+            cls.instance = Rooms( rooms=[Room("Main"), Room("Special") ], current_room="Main" )
+        if not key:
+            return cls.instance
+        elif type(key) == str:
+            return cls.instance[key]
+
     def __init__(self, rooms=[], current_room="Main", connections=[]):
-        self.current_room = current_room
-        self.connections = Connections([Connection(client) for client in connections])
+        Rooms.current_room = current_room
+        for connection in [Connection(client) for client in connections]:
+            Rooms.connections.add(connection)
 
         if isinstance(rooms, list):
-            self.rooms = rooms
+            Rooms.rooms.extend(rooms)
         elif isinstance(rooms, set):
-            self.rooms = list(rooms)
+            Rooms.rooms.extend(list(rooms))
         else:
             raise TypeError("Cannot use" + rooms + " which is a " + type(rooms) + " as list of rooms")
 
     def __add__(self, other):
         if isinstance(other, Connection):
-            self.connections.add(other)
+            Rooms.connections.add(other)
         elif isinstance(other, list) or isinstance(other, dict) or isinstance(other, tuple):
-            self.connections.add(Connection(other))
+            Rooms.connections.add(Connection(other))
         else:    
             raise TypeError("Cannot add "+ str(type(other)) +" to Connections")
-        return self
+        return Rooms.instance
     
     def drop_by_connection(self, ws):
-        self.connections.remove_by_websocket(ws)
-        self.connections = [client for client in self.connections if client.websocket != ws]
+        Rooms.connections.remove_by_websocket(ws)
+        Rooms.connections = [client for client in Rooms.connections if client.websocket != ws]
 
     def add_client(self, other):
         return self.__add__(other)
 
     def broadcast_recent(self, websocket):
-        for room in self.rooms:
-            if room.name == self.current_room:
+        for room in Rooms.rooms:
+            if room.name == Rooms.current_room:
                 for message in room:
                     websockets.broadcast([websocket], message.json())
 
     def broadcast_rooms(self, websocket):
-        message = Message({"rooms" : [room.name for room in self.rooms]}, room_name=self.current_room)
+        message = Message({"rooms" : [room.name for room in Rooms.rooms]}, room_name=Rooms.current_room)
         websockets.broadcast( [websocket], message.json() )
+
+    def broadcast_rooms_all(self):
+        message = Message({"rooms" : [room.name for room in Rooms.rooms]}, room_name=Rooms.current_room)
+        websockets.broadcast(Rooms.connections.websockets(), message.json())
     
     def broadcast(self, message):
-        for room in self.rooms:
+        for room in Rooms.rooms:
             if room.name == message.room_name():
                 room += message
-                websockets.broadcast(self.connections.websockets(), message.json())
+                websockets.broadcast(Rooms.connections.websockets(), message.json())
 
     def change_room(self, new_name):
-        self.current_room = new_name
+        Rooms.current_room = new_name
+
+    def new_room(self, name):
+        room = Room(name)
+        Rooms.rooms.append( room )
+        return room
     
-    def __getitem__(self, key, default=None):
+    def __getitem__(self, key):
         if key == None:
-            for room in self.rooms:
-                if room.name == self.current_room:
+            for room in Rooms.rooms:
+                if room.name == Rooms.current_room:
                     return room
         if isinstance(key, str):
-            for room in self.rooms:
+            for room in Rooms.rooms:
                 if room.name == key:
                     return room
-        elif isinstance(key, int) and len(self.rooms) > key:
-                return self.rooms[key]
-        elif isinstance(key, room) and room in self.rooms:
+        elif isinstance(key, int) and len(Rooms.rooms) > key:
+                return Rooms.rooms[key]
+        elif isinstance(key, room) and room in Rooms.rooms:
                 return room
         else:
-            return default     
-        
-    def __setitem__(self, key, value):
-        if isinstance(key, str) and isinstance(value, Room):
-            if key == value.name:
-                for i, t in enumerate(self.rooms):
-                    if t.name == key:
-                        self.rooms.insert(i, value)
-            else:
-                raise ValueError("Key doesn't match room name")
-        else:
-            return NotImplemented
+            return Rooms     
 
     def __iter__(self):
-        for room in self.rooms:
+        for room in Rooms.rooms:
             yield room
 
-        
+class Users:
+    Users : dict[str,dict] = dict()
 
-rooms = Rooms( [Room("Main"), Room("Special") ], current_room="Main" )
+    @classmethod
+    def new_user(cls, name, room, websocket) -> dict:
+          cls.Users[name] = dict( {'name': name, 'time' : int(time.time()), 'room' : room, 'websocket' : websocket } )
+          return cls.Users[name]
 
-async def chat_handler(websocket : websockets.ServerConnection):
+    @classmethod
+    def update_name(cls, old, new):
+        user = cls.Users.pop(old)
+        user['name'] = new
+        cls.Users[new] = user
+
+    @classmethod
+    def user_active(cls, name):
+        cls.Users[name]['time'] = int(time.time())
+
+    @classmethod
+    def change_room(cls, name, new_room):
+        cls.Users[name]['room'] = new_room
+        cls.user_active(name)
+    
+    @classmethod
+    def matching_websocket(cls, websocket):
+        for name, user in cls.Users.items():
+            if user['websocket'] == websocket:
+                return name
+        return None
+    
+    @classmethod
+    def broadcast(cls, message: Message):
+        for user in cls.Users.values():
+            if message.room_name() == user['room']:
+                websockets.broadcast( [user['websocket']], message.json())
+    
+    @classmethod
+    def __class_getitem__(cls, name):
+        return cls.Users[name] if name in cls.Users.keys() else None
+
+
+async def chat_handler(websocket):
     """
     Handles a single WebSocket connection.
     """
     # Register client with a time to die (removed from our connection list)
+    Rooms[None]
+    rooms = Rooms.instance
+
     rooms.connections.add(Connection(websocket, int(time.time()) + 300))
 
     # send most recent 50 messages
@@ -247,16 +294,42 @@ async def chat_handler(websocket : websockets.ServerConnection):
 
 
             # received a change room command
-            if message_data and "newroom" in message_data.keys():
-                print(f"now switching rooms from {rooms.current_room} to {message_data['newroom']}")
-                rooms.current_room = message_data["newroom"]
+            if message_data and 'change_room' in message_data.keys() and 'username' in message_data.keys():
+                print(f"now switching rooms to {message_data['change_room']}")
+                
+                Users.change_room(message_data['username'], message_data["change_room"])
+                
+                rooms.change_room(message_data['change_room']) 
                 rooms.broadcast_recent(websocket)
                 rooms.broadcast_rooms(websocket)
 
-            if message_data and 'username' in message_data.keys() and 'message' in message_data.keys():
-                m = Message(message_data, room_name=rooms.current_room)
-                rooms.broadcast(m)
+            elif message_data and 'username' in message_data.keys() and 'message' in message_data.keys():
+                user = Users[message_data['username']]
+                # register new user if this is the first time we see him
+                if not user:
+                    # check for changed username
+                    old_username = Users.matching_websocket(websocket)
+                    if old_username:
+                        Users.update_name(old_username, message_data["username"])
+                        print(f"updated username from {old_username} to {message_data['username']}")
+                    else:
+                        user = Users.new_user(message_data["username"], rooms.current_room, websocket)
+                        print("created user " + str(user))
+                else:
+                    Users.user_active(message_data['username'])
+                    print("marked user "+message_data["username"]+" active")
+                
+                # broadcast message
+                m = Message(message_data, room_name=Rooms.current_room)
+                Users.broadcast(m)
                 print("sending message " + m.json())
+            
+            elif message_data and 'newroom' in message_data.key():
+                rooms.new_room(message_data['newroom'])
+                print("created the new room " + message_data['newroom'])
+                rooms.broadcast_rooms_all()
+
+                
 
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection
@@ -265,6 +338,7 @@ async def chat_handler(websocket : websockets.ServerConnection):
 
 async def timeout():
     while True:
+        rooms = Rooms[None]
         rooms.connections.remove_timed_out()
         await asyncio.sleep(1)
 

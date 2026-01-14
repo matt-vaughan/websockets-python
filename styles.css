@@ -1,39 +1,81 @@
-#messages li {
+ul {
+    list-style-type:decimal;
+    padding: 0;
+}
+
+ul#messages {
+    width: 50lvh;
+}
+
+/* big version of chat bubbles */
+#messages li:hover {
     margin: 10px;
     padding: 10px 5px 10px 5px;
-    border-radius: 20px;
-    border-color: rgba(125,65,55,0.8);
-    border-width: 3px;
-    background-color: rgba(85,155,155,0.5);
+    border-radius: 20px 8px 0 10px;
+    border-color: rgba(83, 57, 160, 1) rgb(97, 33, 87) rgb(136, 42, 42) rgb(76, 11, 71);
+    border-width: 13px 2px 4px 7px;
+    border-style: outset outset groove double;
+}
+
+/* small version of chat bubbles */
+#messages li {
+    margin: 3px;
+    padding: 6px 5px 0px 5px;
+    border-radius: 20px 8px 0 10px;
+    border-color: rgba(40, 14, 116, 0.1) rgb(64, 15, 56) rgb(122, 23, 23) rgb(25, 0, 23);
+    border-width: 7px 1px 2px 7px;
+    border-style: outset outset groove double;
+}
+
+#messages li span {
+    overflow-inline: auto;
+    margin: 0 10px;
 }
 
 #messages li span#userspan {
-    background-color: rgba(210, 105, 30, 0.7);
-    margin: 0 10px;
-    
+    /*background-color: rgba(210, 105, 30, 0.7);
+    */
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-size: 16px;
-    font-style: normal;
+    font-size: 18px;
+    font-style: italic;
     font-weight: bold;
-    color: rgb(42, 42, 231);
+    color: rgb(40, 26, 197);
+    border-block-start-color: green;
+    border-block-end-color: red; 
+    border-top-style: groove;
+    border-block-start-style: groove;
+}
+
+#messages li span#messagespan:hover {
+    font-size: 34px;
+    text-shadow: teal;
+    color: rgb(40, 43, 117); 
 }
 
 #messages li span#messagespan {
-    background-color: rgba(210, 205, 230, 0.3);
-    margin: auto;
-    
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 16px;
+    font-size: 20px;
     font-style: normal;
-    color: rgb(255, 179, 254);
+    color: rgb(20, 23, 27);
 }
 
-#messages li span#timespan {
-    background-color: rgba(210, 205, 130, 0.7);
-    margin: auto;
-    
+#messages li div#timespan {
+    width: 20%;
+
+    background-color: rgb(210, 205, 230);
     font-family: 'Courier New', Courier, monospace;
     font-size: 12px;
-    font-style: italic;
+    font-style: normal;
+    font-weight: lighter;
     color: rgb(83, 83, 83);
+
+    padding: 5px 5px 0px 35px;
+    text-align: right;
+    margin: 0px -15px -5px auto;
+    position: relative;
+    overflow: visible;
+    
+    border-radius: 40px 15px 20px 10px;
+    border-style: groove;
 }
+
