@@ -4,18 +4,26 @@
         <link rel="stylesheet" type="text/css" href="./styles.css">   
     </head>
     <body>
-        <div style="float: left;">
+        <div id="messages_div" class="messages">
             <ul id="messages">
 
-            </ul>
-            <input id="username" type="text" placeholder="username">
-            <input id="message" type="text">
-            <button id="send">Send</button>
+            </ul>         
         </div>
-        <div style="float: right;">
+        <div class="rooms">
+            <h3>Rooms</h3>
             <ul id="rooms">
 
             </ul>
+            <br/>
+            <h3>Users in this room</h3>
+            <ul id="users">
+
+            </ul>
+        </div>
+        <div id="console" style="width: 100%;">
+            <input id="username" type="text" placeholder="username" value="default">
+            <input id="message" type="text" placeholder="message">
+            <button id="send">Send</button>
         </div>
         <script>
             const socket = new WebSocket('ws://localhost:6789');
@@ -24,6 +32,7 @@
                 const ul = document.getElementById("rooms");
                 ul.innerHTML = "";
 
+                // add the rooms received from server
                 threads.forEach(thread_name => {
                     const li = document.createElement("li");
                     const textNode = document.createTextNode(thread_name);
@@ -40,7 +49,41 @@
                         var msgs = document.getElementById("messages");
                         msgs.innerHTML = "";
                     });
-                    
+               
+                    ul.appendChild(li);    
+                });
+
+                // add a button to add a new room to the end of the list
+                const li = document.createElement("li");
+                
+                const input = document.createElement("input");
+                input.classList.add('newroom_text');
+                input.type = 'text';
+                input.placeholder = 'new room name <press enter>';
+                
+                input.addEventListener('keypress', (event) => {
+                    if (event.key !== "Enter") return;
+                    const username = document.getElementById('username').value;
+                    const msg = JSON.stringify({new_room: event.target.value, username: username});
+                    console.log("sending" + msg);
+                    socket.send( msg );
+
+                    var msgs = document.getElementById("messages");
+                    msgs.innerHTML = "";
+                });
+
+                li.appendChild(input);
+                ul.appendChild(li);
+            }
+
+            function updateUsers(users) {
+                const ul = document.getElementById("users");
+                ul.innerHTML = "";
+
+                users.forEach(user => {
+                    const li = document.createElement("li");
+                    const textNode = document.createTextNode(user);
+                    li.appendChild(textNode);;
                     ul.appendChild(li);    
                 });
             }
@@ -73,13 +116,17 @@
                 li.appendChild(messagespan);
                 li.appendChild(timespan);
                 
-                // 5. Append the completed list item to the ordered list
                 ul.appendChild(li);
+
+                // scroll to bottom
+                var element = document.getElementById('messages_div');
+                element.scrollTop = element.scrollHeight;
             }
 
             socket.addEventListener('open', (event) => {
                 console.log('WebSocket connection established.');
-                //socket.send('Hello Server!');
+                const msg = JSON.stringify({login: 'default', username: 'default'});
+                socket.send(msg);
             });
 
             socket.addEventListener('message', (event) => {
@@ -91,6 +138,8 @@
                         updateThreads(messageData.rooms);
                     } else if (messageData && messageData.username && messageData.message) {
                         addMessage(messageData.message, messageData.username, messageData.time);
+                    } else if (messageData && messageData.users) {
+                        updateUsers(messageData.users);
                     } else {
                         addMessage(event.data);
                     }
