@@ -232,8 +232,9 @@ async def chat_handler(websocket):
                 
                 rooms.broadcast_recent(websocket, message_data['change_room'])
                 rooms.broadcast_rooms(websocket, message_data['change_room'])
-                rooms.broadcast_users(websocket, user['room'])
+                rooms.broadcast_users(websocket, message_data['change_room'])
             elif message_data and 'username' in message_data.keys() and 'message' in message_data.keys():
+                # repeat login to update websocket and username and mark user active
                 user = Users.login(message_data['username'], websocket)
                 
                 # broadcast message
