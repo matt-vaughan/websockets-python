@@ -31,8 +31,7 @@
             </div>
             <h3 id="dm_header"></h3>
             <p id="dm_received" hidden></p>
-            <input id="dm_message" type="text" placeholder="type message and press <enter>">
-            
+            <input id="dm_message" type="text" placeholder="type message and press <enter>">           
         </div>
         <script>
             const socket = new WebSocket('ws://localhost:6789');
@@ -133,7 +132,7 @@
                         // unhide and put focus on the message send components and hide the message received components
                         dm_header.innerText = "Send direct message to " + user;
                         dm_message.hidden = false;
-                        dm_received.hidden = false;
+                        dm_received.hidden = true;
                         dm.hidden = false;
                         dm_message.focus();
                         
@@ -145,7 +144,7 @@
                             console.log("sending" + msg);
                             socket.send( msg );
                             dm.hidden = true;
-                            dm_message.innerHTML.value = "";
+                            dm_message.value = "";
                         });
                     });
 
@@ -162,10 +161,10 @@
                 const timespan = document.createElement("div");
 
                 messagespan.id = "messagespan";
-                messagespan.innerHTML = message;
+                messagespan.innerText = message;
                 
                 userspan.id = "userspan";
-                userspan.innerHTML = username;
+                userspan.innerText = username;
                 
                 var twoDigit = (intstr) => intstr < 10 ? "0" + new String(intstr) : new String(intstr);
                 var adv = (instr, f=(v)=>v) => f(new String((new Number(instr)) + 1));
