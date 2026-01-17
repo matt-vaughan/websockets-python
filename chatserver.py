@@ -256,9 +256,7 @@ async def chat_handler(websocket):
                 # broadcast message
                 m = Message(message_data, user['room'])
                 Users.broadcast(m)
-                print("sending message " + m.json())
-            
-                           
+                print("sending message " + m.json())            
 
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection
