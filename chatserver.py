@@ -233,6 +233,22 @@ async def chat_handler(websocket):
                 rooms.broadcast_recent(websocket, message_data['change_room'])
                 rooms.broadcast_rooms(websocket, message_data['change_room'])
                 rooms.broadcast_users(websocket, message_data['change_room'])
+
+            elif message_data and 'new_room' in message_data.keys():
+                rooms.new_room(message_data['new_room'])
+                print("created the new room " + message_data['new_room'])
+                rooms.broadcast_rooms_all()
+
+            elif message_data and 'direct_message' in message_data.keys() and 'username' in message_data.keys() and 'message' in message_data.keys():
+                # repeat login to update websocket and username and mark user active
+                user = Users.login(message_data['username'], websocket)
+                
+                if Users[message_data['username']]:
+                    m = Message(message_data, "*dm*");
+                    target_user = Users[message_data['username']]
+                    websockets.broadcast( [target_user['websocket']], m.json() );
+                    print("sending message " + m.json())
+
             elif message_data and 'username' in message_data.keys() and 'message' in message_data.keys():
                 # repeat login to update websocket and username and mark user active
                 user = Users.login(message_data['username'], websocket)
@@ -242,10 +258,7 @@ async def chat_handler(websocket):
                 Users.broadcast(m)
                 print("sending message " + m.json())
             
-            elif message_data and 'new_room' in message_data.keys():
-                rooms.new_room(message_data['new_room'])
-                print("created the new room " + message_data['new_room'])
-                rooms.broadcast_rooms_all()               
+                           
 
     except websockets.exceptions.ConnectionClosed:
         # Handle disconnection

@@ -20,10 +20,19 @@
 
             </ul>
         </div>
-        <div id="console" style="width: 100%;">
+        <div id="console">
             <input id="username" type="text" placeholder="username" value="default">
             <input id="message" type="text" placeholder="message">
             <button id="send">Send</button>
+        </div>
+        <div id="direct_message" hidden>
+            <div id="dm_exit">
+                X
+            </div>
+            <h3 id="dm_header"></h3>
+            <p id="dm_received" hidden></p>
+            <input id="dm_message" type="text" placeholder="type message and press <enter>">
+            
         </div>
         <script>
             const socket = new WebSocket('ws://localhost:6789');
@@ -67,13 +76,26 @@
                     const msg = JSON.stringify({new_room: event.target.value, username: username});
                     console.log("sending" + msg);
                     socket.send( msg );
-
+m_mes
                     var msgs = document.getElementById("messages");
                     msgs.innerHTML = "";
                 });
 
                 li.appendChild(input);
                 ul.appendChild(li);
+            }
+
+            function received_direct_message(message, user) {
+                const dm = document.getElementById("direct_message");
+                const dm_message = document.getElementById("dm_message");
+                const dm_header = document.getElementById("dm_header");
+                const dm_received = document.getElementById("dm_received");
+
+                dm_message.hidden = true;
+                dm_received.hidden = false;
+                dm_header.innerText = "Received direct message from " + user;
+                dm_received.innerText = message;
+                dm.hidden = false;
             }
 
             function updateUsers(users) {
@@ -83,6 +105,43 @@
                 users.forEach(user => {
                     const li = document.createElement("li");
                     const textNode = document.createTextNode(user);
+
+                    // when you click the user: send a direct message
+                    li.addEventListener('click', (event) => {
+                        // clear event listeners for keypress first (by cloning element)
+                        const old_dm = document.getElementById("direct_message");
+                        const dm = old_dm.cloneNode(true); // 'true' also clones children
+                        old_dm.parentNode.replaceChild(dm, old_dm);
+                        
+
+                        // exit button, so we can hide this screen
+                        const dm_exit = document.getElementById("dm_exit");
+                        dm_exit.addEventListener("click", (event) => {
+                            const dm = document.getElementById("direct_message");
+                            dm.hidden = true;
+                        });
+
+                        const dm_message = document.getElementById("dm_message");
+                        const dm_header = document.getElementById("dm_header");
+                        const dm_received = document.getElementById("dm_received");
+                        
+                        dm_header.innerText = "Send direct message to " + user;
+                        dm_message.hidden = false;
+                        dm_received.hidden = false;
+                        dm.hidden = false;
+                        
+                        // when you press enter in the direct message: send message and hide message box
+                        dm_message.addEventListener('keypress', (event) => {
+                            if (event.key != "Enter") return;
+                            const username = document.getElementById("username").value;
+                            const msg = JSON.stringify({direct_message: user, username: username, message: dm_message.value});
+                            console.log("sending" + msg);
+                            socket.send( msg );
+                            dm.hidden = true;
+                            dm_message.innerHTML.value = "";
+                        });
+                    });
+
                     li.appendChild(textNode);;
                     ul.appendChild(li);    
                 });
@@ -136,6 +195,8 @@
                     const messageData = JSON.parse(event.data);
                     if (messageData && messageData.rooms) {
                         updateThreads(messageData.rooms);
+                    } else if (messageData && messageData.direct_message && messageData.username && messageData.message) {
+                        received_direct_message(messageData.message, messageData.username);
                     } else if (messageData && messageData.username && messageData.message) {
                         addMessage(messageData.message, messageData.username, messageData.time);
                     } else if (messageData && messageData.users) {
@@ -184,6 +245,7 @@
                     button.click();
                 }
             })
+
         </script>
     </body>
 </html>
