@@ -76,7 +76,7 @@
                     const msg = JSON.stringify({new_room: event.target.value, username: username});
                     console.log("sending" + msg);
                     socket.send( msg );
-m_mes
+
                     var msgs = document.getElementById("messages");
                     msgs.innerHTML = "";
                 });
@@ -96,6 +96,12 @@ m_mes
                 dm_header.innerText = "Received direct message from " + user;
                 dm_received.innerText = message;
                 dm.hidden = false;
+
+                // exit button, so we can hide this screen
+                const dm_exit = document.getElementById("dm_exit");
+                dm_exit.addEventListener("click", (event) => {
+                    document.getElementById("direct_message").hidden = true;
+                });
             }
 
             function updateUsers(users) {
@@ -117,18 +123,19 @@ m_mes
                         // exit button, so we can hide this screen
                         const dm_exit = document.getElementById("dm_exit");
                         dm_exit.addEventListener("click", (event) => {
-                            const dm = document.getElementById("direct_message");
-                            dm.hidden = true;
+                            document.getElementById("direct_message").hidden = true;
                         });
 
                         const dm_message = document.getElementById("dm_message");
                         const dm_header = document.getElementById("dm_header");
                         const dm_received = document.getElementById("dm_received");
                         
+                        // unhide and put focus on the message send components and hide the message received components
                         dm_header.innerText = "Send direct message to " + user;
                         dm_message.hidden = false;
                         dm_received.hidden = false;
                         dm.hidden = false;
+                        dm_message.focus();
                         
                         // when you press enter in the direct message: send message and hide message box
                         dm_message.addEventListener('keypress', (event) => {

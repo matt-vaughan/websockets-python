@@ -7,32 +7,27 @@ div#console {
 div#direct_message {
     position: fixed;
     bottom: 45lvh;
-    left: 40lvw;
-    height: 10lvh;
-    width: 20lvw;
-    
+    left: 30lvw;
     z-index: 1;
     background-color: rgba(47, 79, 70,0.5);
     border-color: rgba(127, 255, 0, 0.5);
     border-width: 6px;
     border-radius: 10px;
     border-style: groove;
-    padding: 20px;
-
+    padding: 5px;
     align-content: center;
 }
 
 #direct_message input {
-    width: 100%;
+    width: 600px;
 }
 
 #dm_exit {
-    position: fixed;
-    bottom: 55lvh;
-    left: 60lvw;
+    position: absolute;
+    right: 5px;
 
-    padding: 3px;
-    font-size: 30px;
+    padding: 0px;
+    font-size: 20px;
     color: black;
     border-color: grey;
     border-width: 3px;
