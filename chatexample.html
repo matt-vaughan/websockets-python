@@ -36,6 +36,7 @@
         <script>
             const socket = new WebSocket('ws://localhost:6789');
 
+            // updates the room available
             function updateThreads(threads) {
                 const ul = document.getElementById("rooms");
                 ul.innerHTML = "";
@@ -84,6 +85,7 @@
                 ul.appendChild(li);
             }
 
+            // displays a direct message received screen
             function received_direct_message(message, user) {
                 const dm = document.getElementById("direct_message");
                 const dm_message = document.getElementById("dm_message");
@@ -103,6 +105,7 @@
                 });
             }
 
+            // updates the users in this room and makes them clickable (to send them direct messages)
             function updateUsers(users) {
                 const ul = document.getElementById("users");
                 ul.innerHTML = "";
@@ -153,6 +156,7 @@
                 });
             }
 
+            // adds a message to the messages list
             function addMessage(message, username, time=0) {
                 const ul = document.getElementById("messages");
                 const li = document.createElement("li");
@@ -188,12 +192,14 @@
                 element.scrollTop = element.scrollHeight;
             }
 
+            // login with username default
             socket.addEventListener('open', (event) => {
                 console.log('WebSocket connection established.');
                 const msg = JSON.stringify({login: 'default', username: 'default'});
                 socket.send(msg);
             });
 
+            // parse messages received from server and act accordingly
             socket.addEventListener('message', (event) => {
                 console.log('Message from server:', event.data);
                 
@@ -214,10 +220,6 @@
                     console.log("Couldn't parse message as json")
                     addMessage(event.data);
                 }
-                
-                
-                // Data is often sent as JSON strings, so you may need to parse it:
-                // const messageData = JSON.parse(event.data);
             });
 
             socket.addEventListener('error', (event) => {
