@@ -99,7 +99,9 @@ class Rooms:
 
     def broadcast_rooms_all(self):
         message = Message({"rooms" : [room.name for room in self.rooms]}, room_name="*")
-        targets = [ user['websocket'] for user in Users.Users.values() ]
+        targets = []
+        for user in Users.Users.values():
+            targets.extend( user['websockets'] )
         websockets.broadcast( targets, message.json())
 
     def new_room(self, name):
@@ -122,23 +124,42 @@ class Users:
 
     @classmethod
     def new_user(cls, name, room, websocket) -> dict:
-          cls.Users[name] = dict( {'name': name, 'time' : int(time.time()), 'room' : room, 'websocket' : websocket } )
+          cls.Users[name] = dict( {'name': name, 'time' : int(time.time()), 'room' : room, 'websockets' : [websocket] } )
           return cls.Users[name]
 
     @classmethod
     def login(cls, username, websocket):
-        # update websocket or username depending
-        if username in cls.Users.keys():
-            cls.Users[username]['websocket'] = websocket
+        # use to determine user name changes
+        old_username = Users.matching_websocket(websocket)
+        
+        # if we're already logged in with this username and websocket, just update the time
+        if username in cls.Users.keys() and old_username and old_username == username:
             cls.Users[username]['time'] = int(time.time())
+        
+        # if this websocket was one of many sockets for a previous user and the username is logged in
+        elif username in cls.Users.keys() and old_username and len(cls.Users[old_username]['websockets']) != 1:
+            cls.Users[old_username]['websockets'].pop(cls.Users[old_username['websockets']].index(websocket))
+            cls.Users[username]['websockets'].append(websocket)
+            cls.Users[username]['time'] = int(time.time())
+
+        # if this websocket was the only socket for a previous user and the username is logged in
+        elif username in cls.Users.keys() and old_username and len(cls.Users[old_username]['websockets']) == 1:
+            cls.Users.pop(old_username)
+            cls.Users[username]['websockets'].append(websocket)
+            cls.Users[username]['time'] = int(time.time())
+
+        # if username is not already loggedIn    
         else:
-            # check for changed username
-            old_username = Users.matching_websocket(websocket)
-            if old_username:
+            if old_username and len(cls.Users[old_username]['websockets']) == 1:
                 Users.update_name(old_username, username)
+            elif old_username:
+                # remove websocket from other users list
+                cls.Users[old_username]['websockets'].pop(cls.Users[old_username['websockets']].index(websocket))
+                user = Users.new_user(username, "Main", websocket)
             else:
                 # create a user if one doens't exist
                 user = Users.new_user(username, "Main", websocket)
+            cls.Users[username]['time'] = int(time.time())
         return cls.Users[username]
             
     @classmethod
@@ -160,8 +181,9 @@ class Users:
     @classmethod
     def matching_websocket(cls, websocket):
         for name, user in cls.Users.items():
-            if user['websocket'] == websocket:
-                return name
+            for user_ws in user['websockets']:
+                if user_ws == websocket:
+                    return name
         return None
     
     @classmethod
@@ -172,12 +194,12 @@ class Users:
             room.add(message) 
         for user in cls.Users.values():
             if message.room_name() == user['room'] or message.room_name() == "*":
-                websockets.broadcast( [user['websocket']], message.json())
+                websockets.broadcast( user['websockets'], message.json())
     
     @classmethod
     def disconnect(cls, name):
         user = cls.Users[name]
-        #user['websocket'].close()
+        #for websocket in user['websockets']: websocket.close()
         del cls.Users[name]
         return user
 
@@ -246,7 +268,7 @@ async def chat_handler(websocket):
                 if Users[message_data['username']]:
                     m = Message(message_data, "*dm*");
                     target_user = Users[message_data['username']]
-                    websockets.broadcast( [target_user['websocket']], m.json() );
+                    websockets.broadcast( target_user['websockets'], m.json() );
                     print("sending message " + m.json())
 
             elif message_data and 'username' in message_data.keys() and 'message' in message_data.keys():

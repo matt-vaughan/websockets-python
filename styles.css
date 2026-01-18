@@ -133,17 +133,16 @@ ul {
 }
 
 #messages li span#userspan {
-    /*background-color: rgba(210, 105, 30, 0.7);
-    */
+    background-color: rgba(215, 171, 231, 0.25);
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 18px;
     font-style: italic;
     font-weight: bold;
-    color: rgb(40, 26, 197);
+    color: rgb(0, 0, 255);
     
-    border-top-left-radius: 10px;
-    border-top-style: groove;
-    border-left-style: groove;
+    border-radius: 10px;
+    border-top-style: outset;
+    border-left-style: outset;
 }
 
 #messages li span#messagespan:hover {
