@@ -1,3 +1,7 @@
+body {
+    background-color: #C0C0C0;
+}
+
 div#console {
     width: 100%;
     position: fixed;
@@ -112,7 +116,7 @@ ul {
     margin: 6px 3px 3px 3px;
     border-radius: 20px 8px 0 10px;
     border-color:rgba(40, 14, 116, 1) rgb(97, 33, 87) rgb(136, 42, 42) rgb(76, 11, 71);
-    border-width: 13px 2px 4px 7px;
+    border-width: 10px 2px 4px 10px;
     border-style: outset outset groove inset;
 }
 
@@ -122,9 +126,10 @@ ul {
     padding: 6px 5px 0px 5px;
     border-radius: 20px 8px 0 10px;
     border-color: rgba(40, 14, 116, 0.7) rgb(64, 15, 56) rgb(122, 23, 23) rgb(25, 0, 23);
-    border-width: 7px 1px 2px 7px;
+    border-width: 5px 1px 2px 5px;
     border-style: outset outset groove inset;
     width: 95%;
+    background-color: white;
 }
 
 #messages li span {
@@ -141,8 +146,6 @@ ul {
     color: rgb(0, 0, 255);
     
     border-radius: 10px;
-    border-top-style: outset;
-    border-left-style: outset;
 }
 
 #messages li span#messagespan:hover {
