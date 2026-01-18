@@ -160,7 +160,7 @@ class Users:
                 Users.update_name(old_username, username)
             elif old_username:
                 # remove websocket from other users list
-                cls.Users[old_username]['websockets'].pop(cls.Users[old_username['websockets']].index(websocket))
+                cls.Users[old_username]['websockets'].pop(cls.Users[old_username]['websockets'].index(websocket))
                 user = Users.new_user(username, "Main", websocket)
             else:
                 # create a user
