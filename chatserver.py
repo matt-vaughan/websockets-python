@@ -133,7 +133,7 @@ class Users:
         old_username = Users.matching_websocket(websocket)
         
         # if we're already logged in with this username and websocket, just update the time
-        if username in cls.Users.keys() and old_username and old_username == username:
+        if username in cls.Users.keys() and old_username == username:
             cls.Users[username]['time'] = int(time.time())
         
         # if this websocket was one of many sockets for a previous user and the username is logged in
@@ -148,16 +148,22 @@ class Users:
             cls.Users[username]['websockets'].append(websocket)
             cls.Users[username]['time'] = int(time.time())
 
-        # if username is not already loggedIn    
+        # if username in keys and old username is None (which shouldn't happen, but lets handle it anyway)
+        elif username in cls.Users.keys():
+            cls.Users[username]['websockets'].append(websocket)
+            cls.Users[username]['time'] = int(time.time())
+
+        # if username is not already logged in    
         else:
             if old_username and len(cls.Users[old_username]['websockets']) == 1:
+                # change old user name to new user name
                 Users.update_name(old_username, username)
             elif old_username:
                 # remove websocket from other users list
                 cls.Users[old_username]['websockets'].pop(cls.Users[old_username['websockets']].index(websocket))
                 user = Users.new_user(username, "Main", websocket)
             else:
-                # create a user if one doens't exist
+                # create a user
                 user = Users.new_user(username, "Main", websocket)
             cls.Users[username]['time'] = int(time.time())
         return cls.Users[username]
